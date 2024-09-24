@@ -5,13 +5,19 @@
 // the JoTCon '19 Conference
 // this tutorial on reading  / writing to SD card: https://create.arduino.cc/projecthub/electropeak/sd-card-module-with-arduino-how-to-read-write-data-37f390
 // 
-// Possible next steps: include RTC, Lorawan connection
-*/ 
 
-int sensorPin = A0, v,vmax; //select Arduino sensor input, variables v and vmax; 
+The ESP32 ADC might be not good. May need to use an ADS1115 or similar
+Or something like this:
+https://github.com/G6EJD/ESP32-ADC-Accuracy-Improvement-function
+Can also take a number of readings and average them, or calculate a moving average over time.
+
+*/ 
+int v;
+int vmax;
+int sensorPin = 13;          //select Arduino sensor input, variables v and vmax; 
 int sensorValue = 0;        //store value from sensor
-int threshold = 700;        //define threshold value when sensor starts measuring (5V is 1023)
-int hour, minute, second;   // optional: initialize variables for writing time on SD card later 
+
+int threshold = 700;        //define threshold value when sensor starts measuring (5V is 1023). This keeps the sensor from always running, and only starts logging data once threshold is reached.
 
 #include <SPI.h> //SPI card library
 #include <SD.h>  //SD card library
@@ -19,7 +25,7 @@ int hour, minute, second;   // optional: initialize variables for writing time o
 File myFile; //SD Card File
 
 void setup() { 
-  Serial.begin(9600);
+  Serial.begin(115200);
   SD.begin(10); // SD input
   pinMode(sensorPin, INPUT);
 
@@ -46,6 +52,9 @@ myFile = SD.open("speed.txt", FILE_WRITE);    //Create & Open Speed.txt on SD ca
   }
 }
 
+
+
+
 void loop() {
   unsigned long T;                      // period duration in s
   double f;                             // Frequency in MHz 
@@ -62,14 +71,12 @@ void loop() {
           f=1/(double)T;           // f=1/T = frequency
           v=int((f*1e6)/44.0);     // 24 GHz radar
           vmax=max(v,vmax);        // compare v and vmax and write higher value in vmax 
-          Serial.print(".");     // write some dots in serial monitor 
+          //Serial.print(".");     // write some dots in serial monitor 
         } 
-        
-    second = (millis()/1000) % 60; 
-    minute  = (millis()/60000) % 60;
-    hour  = (millis()/3600000) % 24; // put together time since last start of program
     
-    sprintf(s,"%02u:%02u:%02u,%d", hour, minute, second, vmax); // put together string s with time (since last start of prgramme) and vmax speed variable
+    vmax = vmax/1.609344; // convert to MPH
+    sprintf(s,"%3d MPH",vmax);
+
     Serial.println(s);
     sdcardwrite(s);     // function sdcardwrite with argument s     
     delay(2000);        // Wait 2 seconds
